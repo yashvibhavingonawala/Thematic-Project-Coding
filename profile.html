@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Profile · MovieCrew</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar shell">
+    <a class="brand-wrap brand-link" href="./index.html#/home" title="Go to Home">
+      <div class="logo-dot"></div>
+      <div class="brand">
+        <h1>MovieCrew</h1>
+        <p>Movie Database Presentation Tool</p>
+      </div>
+    </a>
+    <nav class="topnav">
+      <a href="./index.html#/home">Home</a>
+      <a href="./index.html#/movies">Movies</a>
+      <a href="./index.html#/genres">Genres</a>
+      <a href="./index.html#/history">History</a>
+    </nav>
+    <div id="navAuth"></div>
+  </header>
+
+  <main class="shell" style="padding: 1rem;">
+    <section class="content" style="max-width: 760px; margin: 0 auto;">
+      <div class="panel-head">
+        <h2>My profile</h2>
+        <p class="muted">Your account details and age restrictions.</p>
+      </div>
+
+      <div id="profileMsg" class="empty-state hidden" style="margin-top: 1rem;"></div>
+
+      <div class="panel" style="margin-top: 1rem;">
+        <div style="display:grid; grid-template-columns: 180px 1fr; gap: 0.75rem;">
+          <div class="muted">Full name</div><div id="pFullName">—</div>
+          <div class="muted">Username</div><div id="pUsername">—</div>
+          <div class="muted">Email</div><div id="pEmail">—</div>
+          <div class="muted">DOB</div><div id="pDob">—</div>
+          <div class="muted">Verification</div><div id="pVerify">—</div>
+          <div class="muted">Adult access</div><div id="pAdult">—</div>
+          <div class="muted">Restrictions</div><div id="pRestrict">—</div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top: 1rem;">
+        <div class="panel-head">
+          <h3 style="margin:0;">Verify / re-verify ID</h3>
+          <p class="muted" style="margin:0;">If you are not verified yet, upload your passport/licence again here.</p>
+        </div>
+        <form id="verifyForm" onsubmit="return false" style="margin-top: 1rem; display:grid; gap: 0.9rem;">
+          <div>
+            <label for="id_document">ID document (passport/licence)</label>
+            <input id="id_document" name="id_document" type="file" accept="image/*" required />
+          </div>
+          <button class="primary-btn" id="verifyBtn" type="button">Submit verification</button>
+          <div id="verifyMsg" class="empty-state hidden"></div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <script src="./auth.global.js"></script>
+  <script>
+  (async () => {
+    const msg = document.getElementById("profileMsg");
+    const verifyMsg = document.getElementById("verifyMsg");
+    const verifyBtn = document.getElementById("verifyBtn");
+    const verifyForm = document.getElementById("verifyForm");
+
+    const showMsg = (el, text) => {
+      el.textContent = text || "";
+      el.classList.toggle("hidden", !text);
+    };
+
+    await (window.MovieCrewAuth?.setNavbarAuthState?.() || Promise.resolve());
+
+    const me = await window.MovieCrewAuth?.getMe?.().catch(() => ({ user: null }));
+    const user = me?.user || null;
+    if (!user) {
+      showMsg(msg, "You are not logged in. Please login first.");
+      setTimeout(() => { window.location.href = "./login.html"; }, 600);
+      return;
+    }
+
+    document.getElementById("pFullName").textContent = user.full_name || "—";
+    document.getElementById("pUsername").textContent = user.username || "—";
+    document.getElementById("pEmail").textContent = user.email || "—";
+    document.getElementById("pDob").textContent = user.birth_date ? String(user.birth_date) : "—";
+    document.getElementById("pVerify").textContent = `${user.verification_status || "pending"} (${user.is_age_verified ? "verified" : "not verified"})`;
+    document.getElementById("pAdult").textContent = user.is_age_verified ? (user.is_adult ? "Adult (18+)" : "Under 18") : "Unknown";
+
+    let restrictionText = "No restrictions.";
+    if (!user.is_age_verified) restrictionText = "Adult movies are hidden until you verify your age.";
+    else if (!user.is_adult) restrictionText = "Adult movies are restricted because you are under 18.";
+    document.getElementById("pRestrict").textContent = restrictionText;
+
+    async function handleVerify() {
+      showMsg(verifyMsg, "");
+      try {
+        const fd = new FormData(verifyForm);
+        const res = await fetch("http://127.0.0.1:8000/verify-id", {
+          method: "POST",
+          credentials: "include",
+          body: fd,
+        });
+        const isJson = (res.headers.get("content-type") || "").includes("application/json");
+        const body = isJson ? await res.json() : {};
+        if (!res.ok) {
+          const detail = body?.detail;
+          const text = Array.isArray(detail) ? detail.join(" ") : (typeof detail === "string" ? detail : "Verification failed");
+          throw new Error(text);
+        }
+        showMsg(verifyMsg, `Status: ${body.verification_status}. Verified: ${body.is_age_verified ? "Yes" : "No"}. DOB: ${body.date_of_birth || "—"}`);
+        setTimeout(() => window.location.reload(), 700);
+      } catch (e) {
+        showMsg(verifyMsg, e.message || "Verification failed.");
+      }
+    }
+
+    verifyBtn?.addEventListener("click", handleVerify);
+    verifyForm?.addEventListener("submit", handleVerify);
+  })();
+  </script>
+</body>
+</html>
+

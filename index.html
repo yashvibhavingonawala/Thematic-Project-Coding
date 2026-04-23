@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Movie Database Presentation Tool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <!-- cache-bust so latest CSS/JS always loads during dev -->
+  <link rel="stylesheet" href="./styles.css?v=20260409" />
+</head>
+<body>
+  <header class="topbar shell">
+    <a class="brand-wrap brand-link" href="#/home" id="brandHomeLink" title="Go to Home">
+      <div class="logo-dot"></div>
+      <div class="brand">
+        <h1>MovieCrew</h1>
+        <p>Movie Database Presentation Tool</p>
+      </div>
+    </a>
+    <nav class="topnav" id="topnav">
+      <a href="#/home" data-route="home">Home</a>
+      <a href="#/movies" data-route="movies">Movies</a>
+      <a href="#/genres" data-route="genres">Genres</a>
+      <a href="#/history" data-route="history">History</a>
+    </nav>
+    <div class="authnav" id="navAuth"></div>
+    <a class="primary-btn nav-btn" id="watchlistNavBtn" href="#/watchlist" data-route="watchlist">My Watchlist <span class="badge" id="watchlistCount">0</span></a>
+  </header>
+
+  <main class="layout shell">
+    <aside class="filters" id="filtersPanel">
+      <div class="panel-head">
+        <h2>Filters</h2>
+        <button class="text-btn" id="clearFiltersBtn">Clear All</button>
+      </div>
+
+      <section class="filter-block">
+        <label for="globalSearch">Search Title, Actor, Director</label>
+        <input
+          id="globalSearch"
+          type="text"
+          placeholder="e.g. Inception, Leonardo DiCaprio..."
+        />
+      </section>
+
+      <section class="filter-block">
+        <h3>Genres</h3>
+        <div class="checkbox-grid" id="genreFilters"></div>
+      </section>
+
+      <section class="filter-block inline">
+        <div>
+          <label for="yearFrom">Year From</label>
+          <input id="yearFrom" type="number" min="1900" max="2100" placeholder="1990" />
+        </div>
+        <div>
+          <label for="yearTo">Year To</label>
+          <input id="yearTo" type="number" min="1900" max="2100" placeholder="2025" />
+        </div>
+      </section>
+
+      <section class="filter-block">
+        <label for="budgetRange">Budget (USD)</label>
+        <select id="budgetRange">
+          <option value="">Any</option>
+          <option value="0-5000000">$0 - $5M</option>
+          <option value="5000000-20000000">$5M - $20M</option>
+          <option value="20000000-100000000">$20M - $100M</option>
+          <option value="100000000-9999999999">$100M+</option>
+        </select>
+      </section>
+
+      <section class="filter-block">
+        <label for="revenueRange">Revenue (USD)</label>
+        <select id="revenueRange">
+          <option value="">Any</option>
+          <option value="0-50000000">$0 - $50M</option>
+          <option value="50000000-200000000">$50M - $200M</option>
+          <option value="200000000-1000000000">$200M - $1B</option>
+          <option value="1000000000-9999999999">$1B+</option>
+        </select>
+      </section>
+
+      <section class="filter-block">
+        <label for="actorFilter">Actor</label>
+        <input id="actorFilter" type="text" placeholder="Type actor name" />
+      </section>
+
+      <section class="filter-block">
+        <label for="directorFilter">Director</label>
+        <input id="directorFilter" type="text" placeholder="Type director name" />
+      </section>
+
+      <button class="primary-btn wide" id="applyFiltersBtn">Apply Filters</button>
+    </aside>
+
+    <section class="content">
+      <section class="hero" id="heroBanner" role="button" tabindex="0" aria-label="Open featured movie">
+        <div class="hero-copy">
+          <p class="eyebrow" id="heroEyebrow">Featured Tonight</p>
+          <h2 class="hero-brand" id="heroBrand">
+            <span class="hero-brand-logo" aria-hidden="true"></span>
+            <span class="hero-brand-text">MovieCrew</span>
+          </h2>
+          <p class="hero-featured-title" id="heroTitle">Inception</p>
+          <p id="heroDescription">
+            A visually immersive thriller where dreams are designed like worlds and one final mission decides everything.
+          </p>
+          <div class="hero-actions" role="group" aria-label="Featured actions">
+            <a class="ghost-btn" href="#/movies">Browse movies</a>
+            <button class="soft-btn" type="button" id="heroRandomBtn">Surprise me</button>
+          </div>
+          <div class="hero-meta">
+            <span id="heroYear">2010</span>
+            <span id="heroRuntime">148 mins</span>
+            <span id="heroGenre">Action, Sci-Fi, Thriller</span>
+          </div>
+        </div>
+        <div class="hero-media" aria-hidden="true">
+          <div class="hero-mark">MovieCrew</div>
+        </div>
+      </section>
+
+      <div class="route-bar hidden" id="genresBar">
+        <div class="panel-head">
+          <h2>Browse by Genre</h2>
+          <p class="muted">Click a genre to view movies</p>
+        </div>
+        <div class="chip-row" id="genreChips"></div>
+      </div>
+
+      <div class="panel-head movies-head">
+        <h2 id="pageTitle">Trending Movies</h2>
+        <div class="head-actions">
+          <button class="text-btn hidden" id="clearHistoryBtn" type="button">Clear history</button>
+          <p id="resultsCount">Showing 0 movies</p>
+        </div>
+      </div>
+
+      <div class="movie-grid" id="movieGrid"></div>
+    </section>
+  </main>
+
+  <template id="movieCardTemplate">
+    <article class="movie-card">
+      <div class="movie-poster">
+        <img class="movie-poster-img" alt="" loading="lazy" />
+      </div>
+      <div class="movie-main">
+        <div class="title-row">
+          <h3 class="movie-title"></h3>
+          <span class="movie-rating"></span>
+        </div>
+        <p class="movie-meta"></p>
+        <p class="movie-overview"></p>
+        <div class="tag-row"></div>
+      </div>
+      <details class="details-block">
+        <summary>Cast & Crew</summary>
+        <p class="movie-cast"></p>
+        <p class="movie-director"></p>
+      </details>
+      <details class="details-block">
+        <summary>Financials</summary>
+        <p class="movie-budget"></p>
+        <p class="movie-revenue"></p>
+      </details>
+    </article>
+  </template>
+
+  <div class="modal-backdrop" id="movieModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="modal-close" id="modalCloseBtn" aria-label="Close">×</button>
+      <div class="modal-hero">
+        <img class="modal-poster" id="modalPoster" alt="" />
+        <div class="modal-hero-text">
+          <h2 id="modalTitle"></h2>
+          <p class="modal-sub" id="modalSub"></p>
+          <div class="tag-row" id="modalGenres"></div>
+          <div class="modal-actions">
+            <button class="primary-btn" id="watchlistToggleBtn" type="button">Add to Watchlist</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="modal-col">
+          <h3>Overview</h3>
+          <p class="modal-text" id="modalOverview"></p>
+        </div>
+        <div class="modal-col">
+          <h3>Cast & Crew</h3>
+          <p class="modal-text" id="modalDirector"></p>
+          <p class="modal-text" id="modalCast"></p>
+        </div>
+        <div class="modal-col">
+          <h3>Financials</h3>
+          <p class="modal-text" id="modalBudget"></p>
+          <p class="modal-text" id="modalRevenue"></p>
+        </div>
+      </div>
+      <div class="modal-body" style="border-top: 1px solid var(--border);">
+        <div class="modal-col" style="grid-column: 1 / -1;">
+          <div class="panel-head" style="align-items: baseline;">
+            <h3 style="margin:0;">Your review</h3>
+            <p class="muted" style="margin:0;">Rate and write a quick review</p>
+          </div>
+          <form id="reviewForm" class="review-form">
+            <div class="stars" role="radiogroup" aria-label="Rating">
+              <input type="radio" id="star5" name="rating" value="5" />
+              <label for="star5" title="5 stars">★</label>
+              <input type="radio" id="star4" name="rating" value="4" />
+              <label for="star4" title="4 stars">★</label>
+              <input type="radio" id="star3" name="rating" value="3" />
+              <label for="star3" title="3 stars">★</label>
+              <input type="radio" id="star2" name="rating" value="2" />
+              <label for="star2" title="2 stars">★</label>
+              <input type="radio" id="star1" name="rating" value="1" />
+              <label for="star1" title="1 star">★</label>
+            </div>
+            <textarea id="reviewText" name="review_text" rows="3" placeholder="Write your review... (optional)"></textarea>
+            <div class="review-actions">
+              <button class="primary-btn" type="submit" id="reviewSubmitBtn">Submit review</button>
+              <div id="reviewMsg" class="muted"></div>
+            </div>
+          </form>
+
+          <div class="panel-head" style="margin-top: 1rem;">
+            <h3 style="margin:0;">Recent reviews</h3>
+            <p class="muted" id="reviewsCount" style="margin:0;">Showing 0</p>
+          </div>
+          <div id="reviewsList" class="reviews-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="authModal" aria-hidden="true">
+    <div class="modal auth-modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+      <button class="modal-close" id="authCloseBtn" aria-label="Close">×</button>
+      <div class="auth-head">
+        <h2 id="authTitle">Welcome to MovieCrew</h2>
+        <p class="muted">Login or create an account to use Watchlist.</p>
+      </div>
+      <div class="auth-tabs" role="tablist" aria-label="Auth tabs">
+        <button class="seg-btn active" id="authTabLogin" type="button">Login</button>
+        <button class="seg-btn" id="authTabRegister" type="button">Register</button>
+      </div>
+
+      <div class="auth-body">
+        <form id="authLoginForm" class="auth-form">
+          <div>
+            <label for="authIdentifier">Username or Email</label>
+            <input id="authIdentifier" name="identifier" autocomplete="username" required />
+          </div>
+          <div>
+            <label for="authPassword">Password</label>
+            <input id="authPassword" name="password" type="password" autocomplete="current-password" required />
+          </div>
+          <button class="primary-btn" type="submit">Login</button>
+        </form>
+
+        <form id="authRegisterForm" class="auth-form hidden">
+          <div>
+            <label for="authFullName">Full name (as on ID)</label>
+            <input id="authFullName" name="full_name" autocomplete="name" required />
+          </div>
+          <div>
+            <label for="authUsername">Username</label>
+            <input id="authUsername" name="username" autocomplete="username" required />
+          </div>
+          <div>
+            <label for="authEmail">Email</label>
+            <input id="authEmail" name="email" type="email" autocomplete="email" required />
+          </div>
+          <div>
+            <label for="authRegPassword">Password</label>
+            <input id="authRegPassword" name="password" type="password" autocomplete="new-password" required />
+          </div>
+          <button class="primary-btn" type="submit">Create account</button>
+        </form>
+        <form id="authVerifyInlineForm" class="auth-form hidden">
+          <div class="panel-head" style="align-items: baseline;">
+            <h2 style="margin:0;">Verify your ID</h2>
+            <p class="muted" style="margin:0;">Required for reviews (age restriction)</p>
+          </div>
+          <div class="route-bar" style="margin: 0;">
+            <p class="muted" style="margin:0;">
+              Upload a clear photo of your passport MRZ page or driving license barcode side. We verify age from the document.
+            </p>
+          </div>
+          <div>
+            <label for="authIdDocInline">ID document (required)</label>
+            <input id="authIdDocInline" name="id_document" type="file" accept="image/*" required />
+          </div>
+          <button class="primary-btn" id="authVerifySubmitBtn" type="submit" disabled>Submit verification</button>
+        </form>
+
+        <div id="authMsg" class="empty-state hidden"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile side drawer (opens from navbar) -->
+  <div id="profileDrawerOverlay" class="drawer-overlay hidden" aria-hidden="true"></div>
+  <aside id="profileDrawer" class="drawer" aria-hidden="true" aria-label="My details panel">
+    <div class="drawer-head">
+      <div>
+        <h3 style="margin:0;">My details</h3>
+        <p class="muted" style="margin:0.15rem 0 0;">Account + age restrictions</p>
+      </div>
+      <button class="text-btn" id="profileDrawerCloseBtn" type="button">Close</button>
+    </div>
+    <div class="drawer-body">
+      <div class="kv">
+        <div class="muted">Full name</div><div id="pdFullName">—</div>
+        <div class="muted">Username</div><div id="pdUsername">—</div>
+        <div class="muted">Email</div><div id="pdEmail">—</div>
+        <div class="muted">DOB</div><div id="pdDob">—</div>
+        <div class="muted">Verification</div><div id="pdVerify">—</div>
+        <div class="muted">Adult access</div><div id="pdAdult">—</div>
+      </div>
+
+      <div class="route-bar" style="margin-top: 1rem;">
+        <p class="muted" style="margin:0;" id="pdRestriction">—</p>
+      </div>
+
+      <div style="display:flex; gap: 0.6rem; margin-top: 1rem; flex-wrap: wrap;">
+        <a class="ghost-btn" href="./profile.html">Open full profile</a>
+        <a class="ghost-btn" href="./register.html">Verify ID</a>
+      </div>
+    </div>
+  </aside>
+
+  <script type="module">
+    import { setNavbarAuthState } from "./auth.js?v=20260409";
+    setNavbarAuthState();
+  </script>
+  <script src="./app.js?v=20260409"></script>
+</body>
+</html>

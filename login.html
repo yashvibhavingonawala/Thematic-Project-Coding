@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login · MovieCrew</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar shell">
+    <a class="brand-wrap brand-link" href="./index.html#/home" title="Go to Home">
+      <div class="logo-dot"></div>
+      <div class="brand">
+        <h1>MovieCrew</h1>
+        <p>Movie Database Presentation Tool</p>
+      </div>
+    </a>
+    <nav class="topnav">
+      <a href="./index.html#/home">Home</a>
+      <a href="./index.html#/movies">Movies</a>
+      <a href="./index.html#/genres">Genres</a>
+      <a href="./index.html#/history">History</a>
+    </nav>
+    <div id="navAuth"></div>
+  </header>
+
+  <main class="shell" style="padding: 1rem;">
+    <section class="content" style="max-width: 620px; margin: 0 auto;">
+      <div class="panel-head">
+        <h2>Login</h2>
+        <p class="muted">Use username or email</p>
+      </div>
+
+      <form id="loginForm" style="margin-top: 1rem; display: grid; gap: 0.9rem;">
+        <div>
+          <label for="identifier">Username or Email</label>
+          <input id="identifier" name="identifier" autocomplete="username" required />
+        </div>
+        <div>
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required />
+        </div>
+        <button class="primary-btn" type="submit">Login</button>
+        <p class="muted" style="margin: 0;">
+          No account? <a href="./register.html" style="color: #ff8d93;">Register</a>
+        </p>
+        <div id="msg" class="empty-state hidden"></div>
+      </form>
+    </section>
+  </main>
+
+  <script type="module">
+    import { setNavbarAuthState } from "./auth.js";
+
+    async function api(path, options = {}) {
+      const res = await fetch(`http://127.0.0.1:8000${path}`, {
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+        ...options,
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const detail = body?.detail;
+        const msg = Array.isArray(detail) ? detail.join(" ") : detail || "Login failed";
+        throw new Error(msg);
+      }
+      return body;
+    }
+
+    const form = document.getElementById("loginForm");
+    const msg = document.getElementById("msg");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      msg.classList.add("hidden");
+      msg.textContent = "";
+
+      const data = Object.fromEntries(new FormData(form).entries());
+      try {
+        await api("/login", { method: "POST", body: JSON.stringify(data) });
+        window.location.href = "./index.html#/home";
+      } catch (err) {
+        msg.textContent = err.message;
+        msg.classList.remove("hidden");
+      }
+    });
+
+    setNavbarAuthState();
+  </script>
+</body>
+</html>
+

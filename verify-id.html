@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verify ID · MovieCrew</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar shell">
+    <a class="brand-wrap brand-link" href="./index.html#/home" title="Go to Home">
+      <div class="logo-dot"></div>
+      <div class="brand">
+        <h1>MovieCrew</h1>
+        <p>Movie Database Presentation Tool</p>
+      </div>
+    </a>
+    <nav class="topnav">
+      <a href="./index.html#/home">Home</a>
+      <a href="./index.html#/movies">Movies</a>
+      <a href="./index.html#/genres">Genres</a>
+      <a href="./index.html#/history">History</a>
+      <a href="./index.html#/watchlist">Watchlist</a>
+    </nav>
+    <div id="navAuth"></div>
+  </header>
+
+  <main class="shell" style="padding: 1rem;">
+    <section class="content" style="max-width: 720px; margin: 0 auto;">
+      <div class="panel-head">
+        <h2>Age verification</h2>
+        <p class="muted">Upload a photo of your ID (and optionally a selfie).</p>
+      </div>
+
+      <div class="route-bar" style="margin-top: 1rem;">
+        <p class="muted" style="margin:0;">
+          This is a <b>simulated</b> verification step for coursework. In a real system, we’d send these files to a provider
+          like Onfido/Stripe Identity and then delete the uploads.
+        </p>
+      </div>
+
+      <form id="verifyForm" style="margin-top: 1rem; display: grid; gap: 0.9rem;">
+        <div>
+          <label for="id_document">ID document (required)</label>
+          <input id="id_document" name="id_document" type="file" accept="image/*" required />
+        </div>
+        <div>
+          <label for="selfie">Selfie (optional)</label>
+          <input id="selfie" name="selfie" type="file" accept="image/*" />
+        </div>
+        <button class="primary-btn" type="submit">Submit for verification</button>
+        <div id="msg" class="empty-state hidden"></div>
+      </form>
+    </section>
+  </main>
+
+  <script type="module">
+    import { setNavbarAuthState } from "./auth.js";
+    setNavbarAuthState();
+
+    const form = document.getElementById("verifyForm");
+    const msg = document.getElementById("msg");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      msg.classList.add("hidden");
+      msg.textContent = "";
+
+      const fd = new FormData(form);
+      try {
+        const res = await fetch("http://127.0.0.1:8000/verify-id", {
+          method: "POST",
+          credentials: "include",
+          body: fd,
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const detail = body?.detail;
+          const text = Array.isArray(detail) ? detail.join(" ") : detail || "Verification failed";
+          throw new Error(text);
+        }
+        msg.textContent = `Status: ${body.verification_status}. Verified: ${body.is_age_verified ? "Yes" : "No"}`;
+        msg.classList.remove("hidden");
+      } catch (err) {
+        msg.textContent = err.message;
+        msg.classList.remove("hidden");
+      }
+    });
+  </script>
+</body>
+</html>
+
