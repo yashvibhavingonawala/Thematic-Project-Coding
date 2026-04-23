@@ -26,3 +26,6 @@ assets/posters/
 
 # Large datasets (keep local)
 backend/data/
+
+# Local GitHub CLI config
+.gh/
