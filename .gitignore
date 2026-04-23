@@ -23,3 +23,6 @@ assets/posters/
 # Editor
 .vscode/
 
+
+# Large datasets (keep local)
+backend/data/
