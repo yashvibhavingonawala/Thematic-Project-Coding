@@ -57,6 +57,8 @@ const reviewText = document.getElementById("reviewText");
 const reviewMsg = document.getElementById("reviewMsg");
 const reviewsList = document.getElementById("reviewsList");
 const reviewsCount = document.getElementById("reviewsCount");
+const recoGrid = document.getElementById("recoGrid");
+const recoMsg = document.getElementById("recoMsg");
 
 const authModal = document.getElementById("authModal");
 const authCloseBtn = document.getElementById("authCloseBtn");
@@ -486,6 +488,74 @@ async function openMovieDetails(movie) {
   }
 
   loadReviewsForMovie(movie.movie_id);
+  loadRecommendationsForMovie(movie.movie_id);
+}
+
+function renderRecommendations(items) {
+  if (!recoGrid) return;
+  recoGrid.innerHTML = "";
+  const fragment = document.createDocumentFragment();
+
+  items.forEach((m) => {
+    const card = document.createElement("div");
+    card.className = "reco-card";
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    card.setAttribute("aria-label", `View details: ${m.title}`);
+
+    const img = document.createElement("img");
+    img.className = "reco-poster";
+    img.alt = `${m.title} poster`;
+    // Reuse same robust poster logic as main cards (local by id/basename -> TMDB -> placeholder)
+    setPosterWithFallback(img, { movie_id: m.movie_id, title: m.title, poster_path: m.poster_path }, "w500");
+
+    const meta = document.createElement("div");
+    meta.className = "reco-meta";
+    const title = document.createElement("div");
+    title.className = "reco-title";
+    title.textContent = m.title;
+    const sub = document.createElement("p");
+    sub.className = "reco-sub";
+    sub.textContent = m.vote_average != null ? `IMDb ${Number(m.vote_average).toFixed(1)}` : "IMDb —";
+
+    meta.appendChild(title);
+    meta.appendChild(sub);
+    card.appendChild(img);
+    card.appendChild(meta);
+
+    const open = async () => {
+      // We already have enough fields to open the modal, but openMovieDetails expects list shape.
+      // Pull the canonical movie object from cache first; fall back to minimal object.
+      const existing = currentMovies.find((x) => x.movie_id === m.movie_id);
+      await openMovieDetails(existing || { ...m, genres: [] });
+    };
+    card.addEventListener("click", open);
+    card.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") open();
+    });
+
+    fragment.appendChild(card);
+  });
+
+  recoGrid.appendChild(fragment);
+}
+
+async function loadRecommendationsForMovie(movieId) {
+  if (!recoGrid || !recoMsg) return;
+  recoGrid.innerHTML = "";
+  recoMsg.textContent = "Loading…";
+
+  try {
+    const { data } = await fetchJSON(`/movies/${movieId}/recommendations`);
+    if (!Array.isArray(data) || data.length === 0) {
+      recoMsg.textContent = "No recommendations yet.";
+      return;
+    }
+    recoMsg.textContent = "";
+    renderRecommendations(data);
+  } catch (e) {
+    recoMsg.textContent = "Failed to load recommendations.";
+  }
 }
 
 function renderMovies(movies) {

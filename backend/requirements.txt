@@ -9,3 +9,4 @@ email-validator
 Pillow
 zxing-cpp
 pytesseract
+scikit-learn

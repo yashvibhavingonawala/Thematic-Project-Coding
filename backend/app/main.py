@@ -22,8 +22,18 @@ from pytesseract.pytesseract import TesseractNotFoundError
 
 from app.config import settings
 from app.db import get_db_session
-from app.models import Genre, Movie, MovieCast, MovieCrew, MovieGenre, Person, Review, User
-from app.schemas import GenreOut, LoginIn, MovieDetail, MovieListItem, RegisterIn, ReviewIn, ReviewOut, UserOut
+from app.models import Genre, Movie, MovieCast, MovieCrew, MovieGenre, MovieRecommendation, Person, Review, User
+from app.schemas import (
+    GenreOut,
+    LoginIn,
+    MovieDetail,
+    MovieListItem,
+    RecommendationOut,
+    RegisterIn,
+    ReviewIn,
+    ReviewOut,
+    UserOut,
+)
 
 
 app = FastAPI(title=settings.app_name)
@@ -852,6 +862,57 @@ def get_movie(movie_id: int, request: Request, session: Session = Depends(db_ses
         cast=list(cast_rows),
         director=director_row,
     )
+
+
+@app.get("/movies/{movie_id}/recommendations", response_model=list[RecommendationOut])
+def get_recommendations(movie_id: int, request: Request, session: Session = Depends(db_session)) -> list[RecommendationOut]:
+    # Age restriction: if the source movie is adult, enforce the same policy as /movies/{id}.
+    movie = session.get(Movie, movie_id)
+    if movie is None:
+        raise HTTPException(status_code=404, detail="Movie not found")
+    if bool(getattr(movie, "adult", False)):
+        uid = request.session.get("user_id")
+        user = session.get(User, int(uid)) if uid else None
+        if not user or not bool(getattr(user, "is_adult", False)):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="18+ content restricted")
+
+    # Join recommendations -> movie table for display info.
+    stmt = (
+        select(
+            Movie.movie_id,
+            Movie.title,
+            Movie.poster_path,
+            Movie.vote_average,
+            MovieRecommendation.similarity_score,
+        )
+        .join(Movie, Movie.movie_id == MovieRecommendation.recommended_movie_id)
+        .where(MovieRecommendation.movie_id == movie_id)
+        .order_by(MovieRecommendation.similarity_score.desc().nullslast(), Movie.vote_count.desc().nullslast())
+        .limit(10)
+    )
+    rows = session.execute(stmt).all()
+
+    # Hide adult recommended movies for non-adult users.
+    uid = request.session.get("user_id")
+    user = session.get(User, int(uid)) if uid else None
+    is_adult_user = bool(getattr(user, "is_adult", False)) if user else False
+    if not is_adult_user:
+        # Fetch adult flags for these rows only (cheap).
+        ids = [r[0] for r in rows]
+        if ids:
+            adult_map = dict(session.execute(select(Movie.movie_id, Movie.adult).where(Movie.movie_id.in_(ids))).all())
+            rows = [r for r in rows if not bool(adult_map.get(r[0], False))]
+
+    return [
+        RecommendationOut(
+            movie_id=int(mid),
+            title=str(title),
+            poster_path=str(poster) if poster is not None else None,
+            vote_average=float(vote) if vote is not None else None,
+            similarity_score=float(score) if score is not None else None,
+        )
+        for (mid, title, poster, vote, score) in rows
+    ]
 
 
 @app.get("/people/search")

@@ -1,6 +1,6 @@
-# MovieScope Backend (FastAPI + MySQL)
+# MovieScope Backend (FastAPI + SQLite)
 
-This backend connects to your existing MySQL schema from `movie_db_inserts.sql` (`movie`, `genre`, `movie_genre`, etc.).
+This backend uses a local SQLite database (see `backend/data/movie_db.sqlite3`).
 
 ## Setup
 
@@ -42,6 +42,27 @@ Open:
     - `revenue_min`, `revenue_max`
     - `page`, `page_size`
 - `GET /movies/{movie_id}`
+- `GET /movies/{movie_id}/recommendations` (keyword similarity, top 10)
+
+## Keyword-based recommendations (TF-IDF)
+
+1) Build `keyword_recommendations.csv` from the Kaggle dataset:
+
+```bash
+python3 "scripts/build_keyword_recommendations.py" \
+  --metadata "data/movies_metadata.csv" \
+  --keywords "data/archive/keywords.csv" \
+  --sqlite "data/movie_db.sqlite3" \
+  --out "data/keyword_recommendations.csv"
+```
+
+2) Import into SQLite:
+
+```bash
+python3 "scripts/import_keyword_recommendations.py" \
+  --csv "data/keyword_recommendations.csv" \
+  --sqlite "data/movie_db.sqlite3"
+```
 
 ## Notes
 

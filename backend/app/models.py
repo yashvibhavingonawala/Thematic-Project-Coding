@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import BigInteger, Boolean, Date, DECIMAL, ForeignKey, Integer, String, Text
+from sqlalchemy import BigInteger, Boolean, Date, DECIMAL, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.sql import func
 from sqlalchemy.types import DateTime
@@ -93,4 +93,12 @@ class Review(Base):
     rating: Mapped[int] = mapped_column(Integer)  # 1..5 stars
     review_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[object] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class MovieRecommendation(Base):
+    __tablename__ = "movie_recommendations"
+
+    movie_id: Mapped[int] = mapped_column(ForeignKey("movie.movie_id"), primary_key=True)
+    recommended_movie_id: Mapped[int] = mapped_column(ForeignKey("movie.movie_id"), primary_key=True)
+    similarity_score: Mapped[float | None] = mapped_column(Float, nullable=True)
 

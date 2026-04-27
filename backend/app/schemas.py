@@ -78,3 +78,11 @@ class ReviewIn(BaseModel):
     rating: int = Field(ge=1, le=5)
     review_text: str | None = Field(default=None, max_length=1000)
 
+
+class RecommendationOut(BaseModel):
+    movie_id: int
+    title: str
+    poster_path: str | None = None
+    vote_average: float | None = None
+    similarity_score: float | None = None
+
